@@ -2,6 +2,11 @@ const mqtt = require('mqtt')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 
+const express = require('express');
+const app = express();
+app.listen(4000, function (err) {
+    console.log(`Server running`)
+});
 
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PWD}@${process.env.MONGO_HOST}/?appName=${process.env.MONGO_CLUSTER}`;
 
