@@ -1,5 +1,5 @@
 const mqtt = require('mqtt')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
 const express = require('express');
@@ -99,7 +99,7 @@ async function saveToDatabase(topic, obj) {
 
         } else if (topic === driveDataTopic) {
             document = obj
-            documentId = obj.tripId
+            documentId = new ObjectId();
         }
         
         document._id = documentId
