@@ -4,12 +4,151 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+app.use(express.json());
+
 app.get('/', function (req, res) {
     res.send("Alive!")
-}); 
+});
+
+app.get('/trips/:tripUUID/data/distance', async function (req, res) {
+    let tripUUID = req.params.tripUUID;
+
+    try {
+        if(database == null) throw new Error(`Database not connected`);
+
+        let collectionName = 'OdbData'
+        const collection = database.collection(collectionName);
+
+        const documents = await collection
+            .find({ tripId: tripUUID })
+            .sort({ timestamp: 1 })
+            .toArray();
+
+        if (documents.length === 0) {
+            return res.status(404).json({ error: 'No data for given trip UUID' });
+        }
+
+        const coords = documents.map(doc => {
+            const lat = doc.locationData.latitude;
+            const lon = doc.locationData.longitude;
+            return [lon, lat];
+        });
+        
+        let downsampledCoords = downsampleCoordinatesForDistanceCalculation(coords)
+
+        let payload = {
+            coordinates: downsampledCoords
+        }
+
+        // OpenRouteService API
+        const orsResponse = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+            method: 'POST',
+            headers: {
+                'Authorization': process.env.OPENROUTE_SERVICE_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!orsResponse.ok) {
+            throw new Error(`ORS API error: ${orsResponse.status}`);
+        }
+
+        const orsData = await orsResponse.json();
+
+        let distance = null;
+
+        if (orsData.routes && orsData.routes.length > 0 && orsData.routes[0].summary.distance) {
+            distance = parseInt(orsData.routes[0].summary.distance);
+        }
+
+        res.json({
+            tripUUID: tripUUID,
+            distance: distance
+         });
+
+    } catch (error) {
+        res.status(500).json({ error: 'Error while contacting OpenRouteService API' });
+    }
+});
+
+app.post('/trips/:tripUUID/calculate/distance', async function (req, res) {
+    let tripUUID = req.params.tripUUID;
+    const reqData = req.body;
+
+    // Sort by timestamp
+    reqData.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Convert to list of [longitude, latitude] elements
+    const coords = reqData.map(item => [item.longitude, item.latitude]);
+
+    let downsampledCoords = downsampleCoordinatesForDistanceCalculation(coords)
+
+    const payload = {
+        coordinates: downsampledCoords
+    };
+
+    try {
+        const response = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+            method: 'POST',
+            headers: {
+                'Authorization': process.env.OPENROUTE_SERVICE_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+    
+        if (!response.ok) {
+            // HTTP error
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+    
+        const responseData = await response.json();
+
+        let distance = null;
+
+        if (responseData.routes && responseData.routes.length > 0 && responseData.routes[0].summary.distance) {
+            distance = parseInt(responseData.routes[0].summary.distance);
+        }
+
+        res.json({
+            tripUUID: tripUUID,
+            distance: distance
+         });
+
+    } catch (error) {
+        res.status(500).json({ error: 'Error while contacting OpenRouteService API' });
+    }
+});
+
 app.listen(4000, function (err) {
     console.log(`Server running`)
 });
+
+function downsampleCoordinatesForDistanceCalculation(coordinates, maxPoints = 70) {
+    const totalPoints = coordinates.length;
+
+    if (totalPoints <= maxPoints) {
+        return coordinates;
+    }
+
+    const result = [];
+
+    // Add first point
+    result.push(coordinates[0]);
+
+    const step = (totalPoints - 2) / (maxPoints - 2);
+
+    for (let i = 1; i < maxPoints - 1; i++) {
+        const index = Math.round(i * step);
+        result.push(coordinates[index]);
+    }
+
+    // Add last point
+    result.push(coordinates[totalPoints - 1]);
+
+    return result;
+}
 
 const uri = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PWD}@${process.env.MONGO_HOST}/?appName=${process.env.MONGO_CLUSTER}`;
 
@@ -44,7 +183,7 @@ function connectToMongo() {
 connectToMongo();
 
 
-const protocol = 'mqtts'
+const protocol = 'mqtt'
 const clientId = `mqtt_${Math.random().toString(16).slice(3)}`
 
 const connectUrl = `${protocol}://${process.env.MQTT_HOST}:${process.env.MQTT_PORT}`
