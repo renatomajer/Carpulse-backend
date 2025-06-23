@@ -34,7 +34,7 @@ app.get('/trips/:tripUUID/data/distance', async function (req, res) {
             return [lon, lat];
         });
         
-        let downsampledCoords = downsampleCoordinatesForDistanceCalculation(coords)
+        let downsampledCoords = downsampleCoordinates(coords)
 
         let payload = {
             coordinates: downsampledCoords
@@ -72,6 +72,44 @@ app.get('/trips/:tripUUID/data/distance', async function (req, res) {
     }
 });
 
+app.get('/trips/:tripUUID/data/coordinates', async function (req, res) {
+    let tripUUID = req.params.tripUUID;
+
+    try {
+        if (database == null) throw new Error(`Database not connected`);
+
+        const collectionName = 'OdbData';
+        const collection = database.collection(collectionName);
+
+        const documents = await collection
+            .find({ tripId: tripUUID })
+            .sort({ timestamp: 1 })
+            .toArray();
+
+        if (documents.length === 0) {
+            return res.status(404).json({ error: 'No data for given trip UUID' });
+        }
+
+        const coordinates = documents.map(doc => {
+            const lat = doc.locationData.latitude
+            const lon = doc.locationData.longitude
+            return {
+                latitude: lat,
+                longitude: lon
+            };
+        });
+
+        res.json({
+            tripUUID: tripUUID,
+            coordinates: coordinates
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error while fetching coordinates from database' });
+    }
+});
+
 app.post('/trips/:tripUUID/calculate/distance', async function (req, res) {
     let tripUUID = req.params.tripUUID;
     const reqData = req.body;
@@ -82,7 +120,7 @@ app.post('/trips/:tripUUID/calculate/distance', async function (req, res) {
     // Convert to list of [longitude, latitude] elements
     const coords = reqData.map(item => [item.longitude, item.latitude]);
 
-    let downsampledCoords = downsampleCoordinatesForDistanceCalculation(coords)
+    let downsampledCoords = downsampleCoordinates(coords)
 
     const payload = {
         coordinates: downsampledCoords
@@ -125,7 +163,7 @@ app.listen(4000, function (err) {
     console.log(`Server running`)
 });
 
-function downsampleCoordinatesForDistanceCalculation(coordinates, maxPoints = 70) {
+function downsampleCoordinates(coordinates, maxPoints = 70) {
     const totalPoints = coordinates.length;
 
     if (totalPoints <= maxPoints) {
