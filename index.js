@@ -90,7 +90,18 @@ app.get('/trips/:tripUUID/data/coordinates', async function (req, res) {
             return res.status(404).json({ error: 'No data for given trip UUID' });
         }
 
-        const coordinates = documents.map(doc => {
+        const seenTimestamps = new Set();
+        const uniqueDocuments = documents.filter(doc => {
+            const ts = doc.timestamp?.$numberLong ?? doc.timestamp;
+            if (seenTimestamps.has(ts)) {
+                return false;
+            } else {
+                seenTimestamps.add(ts);
+                return true;
+            }
+        });
+
+        const coordinates = uniqueDocuments.map(doc => {
             const lat = doc.locationData.latitude
             const lon = doc.locationData.longitude
             return {
