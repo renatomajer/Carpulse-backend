@@ -90,6 +90,8 @@ app.get('/trips/:tripUUID/data/coordinates', async function (req, res) {
             return res.status(404).json({ error: 'No data for given trip UUID' });
         }
 
+        // Hack to remove duplacate timestamps and have clean coordinates
+        // TODO: remove once the timestamp issue is fixed
         const seenTimestamps = new Set();
         const uniqueDocuments = documents.filter(doc => {
             const ts = doc.timestamp?.$numberLong ?? doc.timestamp;
