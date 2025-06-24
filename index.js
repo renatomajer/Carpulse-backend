@@ -172,6 +172,44 @@ app.post('/trips/:tripUUID/calculate/distance', async function (req, res) {
     }
 });
 
+app.get('/drivers/:driverId/statistics', async function (req, res) { 
+    let driverID = req.params.driverId;
+
+    try {
+        if (database == null) throw new Error(`Database not connected`);
+
+        const collectionName = 'DriverSummary';
+        const collection = database.collection(collectionName);
+
+        const document = await collection.findOne({ Email: driverID });
+
+        if (!document) {
+            return res.status(404).json({ error: 'No statistics found for given driver ID' });
+        }
+
+        const totalDistance = parseFloat(document["Total Distance (km)"]);
+        const totalDuration = parseFloat(document["Total Duration (min)"]);
+        const averageSpeed = parseFloat(document["Average Speed (km/h)"]);
+        const averageRpm = parseFloat(document["Average RPM"]);
+        const speedLimitCompliance = parseFloat(document["Speed Limit Compliance (%)"]);
+        const overSpeedDuration = parseFloat(document["Over-Speeding Duration (%)"]);
+
+        res.json({
+            driverId: driverID,
+            totalDistance: totalDistance,
+            totalDuration: totalDuration,
+            averageSpeed: averageSpeed,
+            averageRpm: averageRpm,
+            drivingWithinSpeedLimit: speedLimitCompliance,
+            drivingAboveSpeedLimit: overSpeedDuration
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error while fetching driver statistics from database' });
+    }
+});
+
 app.listen(4000, function (err) {
     console.log(`Server running`)
 });
