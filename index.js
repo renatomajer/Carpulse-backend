@@ -197,7 +197,7 @@ app.get('/trips/:tripId/data/details', async (req, res) => {
             maxRpm,
             drivingAboveSpeedLimit: overSpeedDuration,
             drivingWithinSpeedLimit: speedLimitCompliance,
-            suddenBraking: hardDecel,
+            suddenBreaking: hardDecel,
             suddenAcceleration: rapidAccel,
             stopAndGo: stopGo
         });
