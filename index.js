@@ -210,7 +210,8 @@ app.get('/drivers/:driverId/statistics', async function (req, res) {
     }
 });
 
-app.listen(4000, function (err) {
+// Express listens only local requestst. All external requests are forwarded by Nginx reverse proxy.
+app.listen(4000, '127.0.0.1', function (err) {
     console.log(`Server running`)
 });
 
