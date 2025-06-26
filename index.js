@@ -193,6 +193,8 @@ app.get('/drivers/:driverId/statistics', async function (req, res) {
         const averageRpm = parseFloat(document["Average RPM"]);
         const speedLimitCompliance = parseFloat(document["Speed Limit Compliance (%)"]);
         const overSpeedDuration = parseFloat(document["Over-Speeding Duration (%)"]);
+        const maxSpeed = parseInt(document["Max Speed (km/h)"]);
+        const maxRpm = parseInt(document["Max RPM"]);
 
         res.json({
             driverId: driverID,
@@ -201,7 +203,9 @@ app.get('/drivers/:driverId/statistics', async function (req, res) {
             averageSpeed: averageSpeed,
             averageRpm: averageRpm,
             drivingWithinSpeedLimit: speedLimitCompliance,
-            drivingAboveSpeedLimit: overSpeedDuration
+            drivingAboveSpeedLimit: overSpeedDuration,
+            maxSpeed: maxSpeed,
+            maxRpm: maxRpm
         });
 
     } catch (error) {
