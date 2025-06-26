@@ -186,8 +186,8 @@ app.get('/trips/:tripId/data/details', async (req, res) => {
                 description: weatherMain,
                 temperature: temperature
             },
-            startTimestamp: first.timestamp.$numberLong ,
-            endTimestamp: last.timestamp.$numberLong ,
+            startTimestamp: first.timestamp.$numberLong ?? first.timestamp,
+            endTimestamp: last.timestamp.$numberLong ?? last.timestamp,
             duration,
             idlingPct,
             idlingTime,
