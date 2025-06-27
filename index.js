@@ -389,8 +389,7 @@ const client = mqtt.connect(connectUrl, {
 const driverTopic = 'Auto/Drivers'
 const tripTopic = 'Auto/Trips'
 const driveDataTopic = 'Auto/OdbData'
-const reviewTopic = 'Auto/DriversReviewTrip'
-let topics = [driverTopic, tripTopic, driveDataTopic, reviewTopic]
+let topics = [driverTopic, tripTopic, driveDataTopic]
 
 client.on('connect', () => {
     console.log('Connected to MQTT Broker.')
@@ -420,7 +419,7 @@ async function saveToDatabase(topic, obj) {
             document = obj[0]
             documentId = obj[0].Email
 
-        } else if (topic === reviewTopic || topic === tripTopic) {
+        } else if (topic === tripTopic) {
             document = obj[0]
             documentId = obj[0].tripId
 
